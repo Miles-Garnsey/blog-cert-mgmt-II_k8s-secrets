@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cassandra-reaper
+spec:
+  selector:
+    matchLabels:
+      app: cassandra-reaper
+  template:
+    metadata:
+      labels:
+        app: cassandra-reaper
+    spec:
+      volumes:
+      - name: certs
+        secret:
+          secretName: reaper-jks-keystore
+      - name: cqlsh-config
+        configMap:
+          name: cqlsh-config
+      initContainers:
+      - name: reaper-keyspace-configuration
+        image: cassandra:3.11.10
+        env:
+        - name: CQLSH_COMMAND
+          value: "CREATE KEYSPACE IF NOT EXISTS reaper_db WITH replication = {'class': 'NetworkTopologyStrategy', 'dc1': 1 };"
+        volumeMounts:
+        - name: cqlsh-config
+          mountPath: "/root/.cassandra/cqlshrc"
+          subPath: cqlshrc
+        - name: certs
+          mountPath: "/crypto"
+        command: ['sh', '-c', 'sleep 840 && cqlsh "cluster1-dc1-all-pods-service" -e "${CQLSH_COMMAND}"']
+      containers:
+      - name: cassandra-reaper
+        image: thelastpickle/cassandra-reaper:2.2.1
+        volumeMounts:
+          - name: certs
+            mountPath: "/crypto"
+          - name: cqlsh-config
+            mountPath: "/root/.cassandra/cqlshrc"
+            subPath: cqlshrc
+        env:
+        - name: REAPER_STORAGE_TYPE
+          value: cassandra
+        - name: REAPER_CASS_CLUSTER_NAME
+          value: "cluster1"
+        - name: REAPER_CASS_CONTACT_POINTS
+          value: '["cluster1-dc1-all-pods-service"]'
+        - name: REAPER_ENABLE_WEBUI_AUTH
+          value: "true"
+        - name: REAPER_WEBUI_USER
+          value: "secret-user"
+        - name: REAPER_WEBUI_PASSWORD
+          value: "secretpassword135087"
+        - name: REAPER_CASS_NATIVE_PROTOCOL_SSL_ENCRYPTION_ENABLED
+          value: "true"
+        - name: REAPER_KEYSTORE_PASS
+          valueFrom:
+            secretKeyRef:
+              name: jks-password
+              key: keystore-pass
+        - name: JAVA_OPTS
+          value: "-Dssl.enable=true -Djavax.net.ssl.keyStore=/crypto/keystore.jks  -Djavax.net.ssl.trustStore=/crypto/truststore.jks  -Djavax.net.ssl.keyStorePassword=$(REAPER_KEYSTORE_PASS) -Djavax.net.ssl.trustStorePassword=$(REAPER_KEYSTORE_PASS)"
+        readinessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 30
+        resources:
+          requests:
+            cpu: 200m
+            memory: 400M
+          limits:
+            cpu: 300m
+            memory: 500M
+        ports:
+        - containerPort: 8081
+          name: 'admin-ui'
+        - containerPort: 8080
+          name: 'web-ui'

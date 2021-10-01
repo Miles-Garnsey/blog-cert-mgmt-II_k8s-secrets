@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1alpha2
+kind: Certificate
+metadata:
+  name: reaper-cert
+spec:
+  secretName: reaper-jks-keystore
+  dnsNames:
+  - reaper.cass-operator.svc.cluster.local
+  issuerRef:
+    name: ca-issuer
+  keystores:
+    jks:
+      create: true
+      passwordSecretRef: # Password used to encrypt the keystore
+        key: keystore-pass
+        name: jks-password

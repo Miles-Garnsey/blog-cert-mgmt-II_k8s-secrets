@@ -2,14 +2,13 @@ apiVersion: cassandra.datastax.com/v1beta1
 kind: CassandraDatacenter
 metadata:
   name: dc1
-  namespace: cass-operator
 spec:
   clusterName: cluster1
   serverType: cassandra
   serverVersion: 3.11.10
   managementApiAuth:
     insecure: {}
-  size: 1
+  size: 3
   podTemplateSpec:
     spec:
       containers:
@@ -31,9 +30,9 @@ spec:
           storage: 5Gi
   config:
     cassandra-yaml:
-      authenticator: org.apache.cassandra.auth.AllowAllAuthenticator
-      authorizer: org.apache.cassandra.auth.AllowAllAuthorizer
-      role_manager: org.apache.cassandra.auth.CassandraRoleManager
+  #     authenticator: org.apache.cassandra.auth.AllowAllAuthenticator
+  #     authorizer: org.apache.cassandra.auth.AllowAllAuthorizer
+  #     role_manager: org.apache.cassandra.auth.CassandraRoleManager
       client_encryption_options:
         enabled: true
         # If enabled and optional is set to true encrypted and unencrypted connections are handled.
