@@ -1,0 +1,57 @@
+apiVersion: cassandra.datastax.com/v1beta1
+kind: CassandraDatacenter
+metadata:
+  name: dc1
+  namespace: cass-operator
+spec:
+  clusterName: cluster1
+  serverType: cassandra
+  serverVersion: 3.11.10
+  managementApiAuth:
+    insecure: {}
+  size: 1
+  podTemplateSpec:
+    spec:
+      containers:
+        - name: "cassandra"
+          volumeMounts:
+          - name: certs
+            mountPath: "/crypto"
+      volumes:
+      - name: certs
+        secret:
+          secretName: cassandra-jks-keystore
+  storageConfig:
+    cassandraDataVolumeClaimSpec:
+      storageClassName: standard
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+  config:
+    cassandra-yaml:
+      authenticator: org.apache.cassandra.auth.AllowAllAuthenticator
+      authorizer: org.apache.cassandra.auth.AllowAllAuthorizer
+      role_manager: org.apache.cassandra.auth.CassandraRoleManager
+      client_encryption_options:
+        enabled: true
+        # If enabled and optional is set to true encrypted and unencrypted connections are handled.
+        optional: false
+        keystore: /crypto/keystore.jks
+        keystore_password: dc1
+        require_client_auth: true
+        # Set trustore and truststore_password if require_client_auth is true
+        truststore: /crypto/truststore.jks
+        truststore_password: dc1
+        protocol: TLS
+        cipher_suites: [TLS_RSA_WITH_AES_128_CBC_SHA]
+      server_encryption_options:
+        internode_encryption: all
+        keystore: /crypto/keystore.jks
+        keystore_password: dc1
+        truststore: /crypto/truststore.jks
+        truststore_password: dc1
+    jvm-options:
+      initial_heap_size: 800M
+      max_heap_size: 800M
