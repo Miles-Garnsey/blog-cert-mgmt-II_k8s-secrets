@@ -83,8 +83,7 @@ As a result, we recommend the use of Reaper, which runs as a Cassandra client an
 
 # The set up
 
-The manifests for this blog post can be found [here](<<github_link>>).
-
+The manifests for this blog post can be found [here](https://github.com/thelastpickle/blog-cert-mgmt-II_k8s-secrets).
 ## Environment
 
 We assume that you're running Kubernetes 1.21, and we'll be running with a Cassandra 3.11.10 install. The demo environment we'll be setting up is a 3 node environment, and we have tested this configuration against 3 nodes. 
