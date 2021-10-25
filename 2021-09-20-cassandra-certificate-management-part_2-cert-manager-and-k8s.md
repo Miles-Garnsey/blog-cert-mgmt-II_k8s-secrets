@@ -63,9 +63,13 @@ At this point, Cassandra users are probably about to interject with a loud "Yes,
 There are two caveats to be aware of here:
 
 1. Most Cassandra deployment options currently available (including statefulSets, `cass-operator` or k8ssandra) do not currently support using a cert-per-node configuration in a convenient fashion. This is because the `PodTemplate.spec` portions of these resources are identical for each pod in the StatefulSet. This precludes the possibility of adding per-node certs via environment or volume mounts.
-2. There are currently some open questions about how to rotate certificates without downtime. If you want to use internode encryption, our current recommendation is to use a root-ca per Cassandra datacenter (DC) and renew the certs on one DC at a time, failing over each DC in turn. You won't be able to use a rolling restart and will need to bring the whole DC offline.
+2. There are currently some open questions about how to rotate certificates without downtime when using internode encryption. 
+    - Our current recommendation is to use a CA PC per Cassandra datacenter (DC) and add some basic scripts to merge both CA PCs into a single truststore to be propagated across all nodes. By renewing the CA PC independently you can ensure one DC is always online, but you still do suffer a network partition. Hinted handoff should theoretically rescue the situation but it is a less than robust solution, particularly on larger clusters. This solution is not recommended when using lightweight transactions or non `LOCAL` consistency levels.
+    - One mitigation to consider is using non-expiring CA PCs, in which case no CA PC rotation is ever performed without a manual trigger. KS PCs and KS PSKs may still be rotated. When CA PC rotation is essential this approach allows for careful planning ahead of time, but it is not always possible when using a 3rd party CA.
+    - [Istio](https://istio.io/) or other service mesh approaches can fully automate mTLS in clusters, but Istio is a fairly large committment and can create its own complexities.
+    - Manual management of certificates may be possible using a secure vault (e.g. [HashiCorp vault](https://www.vaultproject.io/)), [sealed secrets](https://github.com/bitnami-labs/sealed-secrets), or similar approaches. In this case, cert manager may not be involved.
 
-These caveats are not trivial. To address (2) more elegantly you could implement Anthony's solution from part one of this blog series; but you'll need to script this up yourself to suit your k8s environment.
+These caveats are not trivial. To address (2) more elegantly you could also implement Anthony's solution from [part one](https://thelastpickle.com/blog/2021/06/15/cassandra-certificate-management-part_1-how-to-rotate-keys.html) of this blog series; but you'll need to script this up yourself to suit your k8s environment.
 
 We are also in [discussions](https://github.com/jetstack/cert-manager/issues/4344) with the folks over at cert-manager about how their ecosystem can better support Cassandra. We hope to report progress on this front over the coming months.
 
@@ -84,6 +88,7 @@ As a result, we recommend the use of Reaper, which runs as a Cassandra client an
 # The set up
 
 The manifests for this blog post can be found [here](https://github.com/thelastpickle/blog-cert-mgmt-II_k8s-secrets).
+
 ## Environment
 
 We assume that you're running Kubernetes 1.21, and we'll be running with a Cassandra 3.11.10 install. The demo environment we'll be setting up is a 3 node environment, and we have tested this configuration against 3 nodes. 
