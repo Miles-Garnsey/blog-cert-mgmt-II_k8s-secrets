@@ -272,7 +272,6 @@ spec:
         truststore: /crypto/truststore.jks
         truststore_password: dc1
         protocol: TLS
-        cipher_suites: [TLS_RSA_WITH_AES_128_CBC_SHA]
       server_encryption_options:
         internode_encryption: all
         keystore: /crypto/keystore.jks
